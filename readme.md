@@ -38,3 +38,9 @@ Impression of the first part:
 ```
 
 ![](./impressions/day02a.png)
+
+For the bonus part I turned to Gleam, because that seemed fun. However, while using the language, I started to get turned off, because they seem to have an inclination to follow "ergonomic functional-style" syntax ... and .. let's be honest, it's simply the same but less ergonomic than .. Adventlang! :D So then afterwards I also coded the first part in Adventlang for comparison. (The bonus would be a bit harder, I might need to add more stuff to the stdlib.)
+
+Side-by-side:
+
+![](./impressions/day02_gleam_vs_adventlang.png)
