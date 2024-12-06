@@ -11,9 +11,14 @@ fn main() {
         println!("First part: {}", solve(input));
     });
 
+    // time(|| {
+    //     // ±1.5s
+    //     println!("Bonus: {}", bonus(input));
+    // });
+
     time(|| {
-        // ±1.5s
-        println!("Bonus: {}", bonus(input));
+        // ±400ms
+        println!("Bonus: {}", bonus_v2(input));
     });
 }
 
@@ -135,6 +140,81 @@ fn bonus(input: &str) -> usize {
     num_loops as usize
 }
 
+fn bonus_v2(input: &str) -> usize {
+    let grid = input
+        .trim()
+        .lines()
+        .map(|line| line.chars().collect::<Vec<_>>())
+        .collect::<Vec<_>>();
+
+    let h = grid.len() as i32;
+    let w = grid[0].len() as i32;
+
+    let start = grid
+        .iter()
+        .enumerate()
+        .find_map(|(y, row)| {
+            row.iter().enumerate().find_map(|(x, c)| match c {
+                '^' => Some((x as i32, y as i32)),
+                _ => None,
+            })
+        })
+        .unwrap();
+
+    let check_if_loop = |obstruction: (i32, i32)| {
+        let (mut x, mut y) = start;
+        // !! `clone` is necessary due to a bug in AL that's been in there for a long time, maybe even since the beginning...
+
+        let (mut dx, mut dy) = (0, -1);
+
+        let mut been = FxHashSet::default();
+        been.insert((x, y, dx, dy));
+
+        loop {
+            let (nx, ny) = (x + dx, y + dy);
+            if nx < 0 || nx >= w || ny < 0 || ny >= h {
+                return false;
+            }
+
+            if grid[ny as usize][nx as usize] == '#' || (nx, ny) == obstruction {
+                (dx, dy) = (0 - dy, dx)
+            } else {
+                (x, y) = (nx, ny);
+            }
+
+            if been.contains(&(x, y, dx, dy)) {
+                return true;
+            }
+
+            been.insert((x, y, dx, dy));
+        }
+    };
+
+    let mut loops_found = FxHashSet::default();
+
+    let (mut dx, mut dy) = (0, -1);
+
+    let (mut x, mut y) = start;
+    loop {
+        let (nx, ny) = (x + dx, y + dy);
+        if nx < 0 || nx >= w || ny < 0 || ny >= h {
+            break;
+        }
+
+        if grid[ny as usize][nx as usize] == '#' {
+            (dx, dy) = (0 - dy, dx)
+        } else {
+            (x, y) = (nx, ny);
+
+            if !loops_found.contains(&(nx, ny)) && check_if_loop((nx, ny)) {
+                loops_found.insert((nx, ny));
+            }
+        }
+    }
+
+    loops_found.len()
+}
+
 #[test]
 fn test() {
     assert_eq!(
@@ -157,6 +237,24 @@ fn test() {
 
     assert_eq!(
         bonus(
+            "
+....#.....
+.........#
+..........
+..#.......
+.......#..
+..........
+.#..^.....
+........#.
+#.........
+......#...
+",
+        ),
+        6
+    );
+
+    assert_eq!(
+        bonus_v2(
             "
 ....#.....
 .........#
