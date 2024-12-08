@@ -78,3 +78,15 @@ Today was a bad day for Adventlang..
 
 _Update: I realized the kinda obvious first optimization that makes it a whole lot faster: only check obstruction placements along the path that the guard is going to walk anyway. This way, AL can get the job done in 6 minutes, and Rust in 400ms ☺️_
 w
+
+## Day 7
+
+Fun and not too hard :)
+
+## Day 8
+
+Also fun and not too hard, except .. I did it in Rust, because Adventlang as yet another syntax problem 😓 — this apparently doesn't work:
+
+```al
+antennas[a] []= (x,y)
+```
