@@ -2,6 +2,12 @@
 
 See https://adventofcode.com/2024
 
+## Links
+
+- [Previous year's repo](https://github.com/kelleyvanevert/adventofcode2023)
+- Friends also participating:
+  - [Auke](https://github.com/Fadarrizz/advent-of-code/tree/main/2024/)
+
 ## Day 1
 
 Solved in Google Sheets, because Chen said "Oh, I don't need to learn Python for this, I can just do it in Excel!"
