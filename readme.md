@@ -104,3 +104,7 @@ I'm embarrassed how long today took me! XD Let's maybe just say my brain was fri
 ## Day 10
 
 Nice :)
+
+## Day 11
+
+Simple, because I know by know, having done Advent of Code before, that this is a dynamic programming problem that can be super easily expressed with the `#[cached]` macro from the `cached` crate 😉 ±20 minutes to complete, and ±20 milliseconds to compute (the bonus).
