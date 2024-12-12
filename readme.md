@@ -108,3 +108,9 @@ Nice :)
 ## Day 11
 
 Simple, because I know by know, having done Advent of Code before, that this is a dynamic programming problem that can be super easily expressed with the `#[cached]` macro from the `cached` crate 😉 ±20 minutes to complete, and ±20 milliseconds to compute (the bonus).
+
+## Day 12
+
+The first part was a fun little exercise of the "flood gathering" algorithm (just named it that way myself). And then the bonus was a fun challenge that turned out just a bit more tricky than I though, because of my encoding of edges and the existence of diagonally adjacent regions.. See below, the most interestingly formatted + commented function I might have ever made in Rust :P
+
+![](./impressions/day12.png)
