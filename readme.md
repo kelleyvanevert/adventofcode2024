@@ -114,3 +114,9 @@ Simple, because I know by know, having done Advent of Code before, that this is 
 The first part was a fun little exercise of the "flood gathering" algorithm (just named it that way myself). And then the bonus was a fun challenge that turned out just a bit more tricky than I though, because of my encoding of edges and the existence of diagonally adjacent regions.. See below, the most interestingly formatted + commented function I might have ever made in Rust :P
 
 ![](./impressions/day12.png)
+
+## Day 13
+
+Today was all about whether I can still muster up enough linear algebra maths 😅 I managed, though
+
+![](./impressions/day_13.jpg)
