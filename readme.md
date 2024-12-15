@@ -126,3 +126,37 @@ Today was all about whether I can still muster up enough linear algebra maths �
 Today's challenge started with a little speed-run, trying to solve it in 30 minutes before leaving with Chen to Markus + Priyanka to play Warhammer :P I was able to get the first part just in time, and then saw taht the bonus would require by-eye verification and probably using images and whatnot .. so I postponed to the next day :) The next day, I just went ahead and generated lots of png grids of each next 100 steps, and then verified them by eye, until we found it in the 75th grid! So cute!
 
 ![](./day14/rust/aoc2024_day14_75.png)
+
+## Day 15
+
+Today was pretty hard! The first part as OK, but then I got stuck on an algorithmic detail in the bonus part for an hour or two :O The generalization of the bonus part was fun. The way I set it up, instead of looking each subsequent next grid cell, while walking through the 'ramifications' of what it would mean to move in a certain direction, we need to now look at each subsequent next 'frontier' of grid cells. But I forgot to remove empty gird cells from the frontier, and then had to manually verify a lot of the moves taken to finally find the move where it went wrong, in the test example. Which was here:
+
+```
+[504] MOVING robot (7, 4) dir v (0, 1)...
+
+Grid before:
+####################
+##[]...[].....[][]##
+##[]...........[].##
+##............[][]##
+##.....@....[].[].##
+##..##[]....[][]..##
+##...[]...[]..[]..##
+##.....[]..[].[][]##
+##........[]......##
+####################
+
+Grid after:
+####################
+##[]...[].....[][]##
+##[]...........[].##
+##............[][]##
+##..........[].[].##
+##..##.@....[][]..##
+##....[]..[]..[]..##
+##...[]....[].[][]##
+##.....[].[]......##
+####################
+```
+
+Indeed, 504 moves in 😅 You can see it going wrong. As soon as I found this little bug, the algorithm worked and I was able to compute the answer, in about 3ms 💪
