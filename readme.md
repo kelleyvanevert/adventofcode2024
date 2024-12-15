@@ -120,3 +120,9 @@ The first part was a fun little exercise of the "flood gathering" algorithm (jus
 Today was all about whether I can still muster up enough linear algebra maths 😅 I managed, though
 
 ![](./impressions/day_13.jpg)
+
+## Day 14
+
+Today's challenge started with a little speed-run, trying to solve it in 30 minutes before leaving with Chen to Markus + Priyanka to play Warhammer :P I was able to get the first part just in time, and then saw taht the bonus would require by-eye verification and probably using images and whatnot .. so I postponed to the next day :) The next day, I just went ahead and generated lots of png grids of each next 100 steps, and then verified them by eye, until we found it in the 75th grid! So cute!
+
+![](./day14/rust/aoc2024_day14_75.png)

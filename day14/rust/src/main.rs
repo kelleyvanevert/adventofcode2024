@@ -1,6 +1,4 @@
-#![feature(let_chains)]
-
-use cached::proc_macro::cached;
+use image::{ImageBuffer, Rgb};
 use itertools::Itertools;
 use std::{
     thread::sleep,
@@ -21,7 +19,7 @@ fn main() {
     //     println!("Bonus: {}", bonus(input));
     // });
 
-    bonus(input, 101, 103);
+    bonus(input);
 }
 
 // macro_rules! vprintln {
@@ -66,7 +64,13 @@ fn solve(input: &str, w: i64, h: i64, t: i64) -> usize {
     quadrants[0][0] * quadrants[0][1] * quadrants[1][0] * quadrants[1][1]
 }
 
-fn bonus(input: &str, w: i64, h: i64) -> usize {
+fn bonus(input: &str) -> usize {
+    const W: i64 = 101;
+    const H: i64 = 103;
+    const S: u32 = 120;
+    const N: u32 = 10;
+    const P: u32 = N * N;
+
     let robots = input
         .trim()
         .lines()
@@ -81,24 +85,25 @@ fn bonus(input: &str, w: i64, h: i64) -> usize {
         })
         .collect_vec();
 
-    for t in 0.. {
-        println!("{}", "X".repeat(100));
+    for i in 0.. {
+        let mut image = ImageBuffer::new(S as u32 * N, S as u32 * N);
 
-        // final position
-        let mut grid = vec![vec![' '; w as usize]; h as usize];
-        for &((px, py), (vx, vy)) in robots.iter() {
-            let (fx, fy) = ((((px + vx * t) % w) + w) % w, (((py + vy * t) % h) + h) % h);
-            grid[fy as usize][fx as usize] = 'X';
+        for t in (i * P)..((i + 1) * P) {
+            let gx = t % N;
+            let gy = (t / N) % N;
+
+            for &((px, py), (vx, vy)) in robots.iter() {
+                let (fx, fy) = (
+                    (((px + vx * (t as i64)) % W) + W) % W,
+                    (((py + vy * (t as i64)) % H) + H) % H,
+                )
+                    .map(|v| v as u32);
+
+                *image.get_pixel_mut(gx * S + fx, gy * S + fy) = Rgb([255u8, 255u8, 255u8]);
+            }
         }
-        let grid = grid
-            .iter()
-            .map(|line| line.iter().collect::<String>())
-            .join("\n");
 
-        println!("{grid}");
-        println!("^^ t = {t}");
-
-        sleep(Duration::from_millis(10));
+        image.save(format!("aoc2024_day14_{}.png", i)).unwrap();
     }
 
     0
