@@ -224,15 +224,58 @@ fn bonus(input: &str) -> usize {
 
         // counterclockwise
         // (1, 0) -> (0, -1) -> (-1, 0) -> (0, 1)
-        best.push(Path(curr.clone(), (x, y), (dy, -dx), score + 1000));
+        if at!((x + dy, y - dx)) == '.' {
+            best.push(Path(curr.clone(), (x, y), (dy, -dx), score + 1000));
+        }
 
         // clockwise
         // (1, 0) -> (0, 1) -> (-1, 0) -> (0, -1)
-        best.push(Path(curr.clone(), (x, y), (-dy, dx), score + 1000));
+        if at!((x - dy, y + dx)) == '.' {
+            best.push(Path(curr.clone(), (x, y), (-dy, dx), score + 1000));
+        }
+
+        // // walk forward
+        // if at!((x + dx, y + dy)) == '.' {
+        //     let (mut x, mut y) = (x, y);
+        //     let mut score = score;
+
+        //     loop {
+        //         (x, y) = (x + dx, y + dy);
+        //         score += 1;
+
+        //         if at!((x, y)) == '#' {
+        //             // failed
+        //             break;
+        //         }
+        //         if at!((x + dy, y - dx)) == '.' || at!((x - dy, y + dx)) == '.' {
+        //             // success
+        //             best.push(Path(curr.clone(), (x, y), (dx, dy), score));
+        //             break;
+        //         }
+        //     }
+        // }
 
         // walk forward
         if at!((x + dx, y + dy)) == '.' {
-            best.push(Path(curr.clone(), (x + dx, y + dy), (dx, dy), score + 1));
+            let (mut x, mut y) = (x, y);
+            let mut score = score;
+
+            (x, y) = (x + dx, y + dy);
+            score += 1;
+
+            while at!((x, y)) == '.'
+                && at!((x + dy, y - dx)) == '#'
+                && at!((x - dy, y + dx)) == '#'
+                && at!((x + dx, y + dy)) == '.'
+            {
+                println!("walk extra step at {x},{y} dir {dx},{dy}");
+                (x, y) = (x + dx, y + dy);
+                score += 1;
+            }
+
+            if at!((x, y)) == '.' {
+                best.push(Path(curr.clone(), (x, y), (dx, dy), score));
+            }
         }
     }
 
