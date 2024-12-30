@@ -12,7 +12,7 @@ fn main() {
     });
 
     time(|| {
-        // ±?
+        // ±2s
         println!("Bonus: {}", bonus(input));
     });
 }
@@ -71,8 +71,25 @@ fn index_of<T: Eq>(vec: &Vec<T>, el: &T) -> Option<usize> {
     vec.iter().position(|e| e == el)
 }
 
-// n         : usize
-// adj[i][j] : bool
+fn find_triples(n: usize, adj: &FxHashSet<(usize, usize)>) -> FxHashSet<Vec<usize>> {
+    let mut groups = FxHashSet::default();
+
+    for i in 0..n {
+        for j in 0..n {
+            if adj.contains(&(i, j)) {
+                for k in (j + 1)..n {
+                    if adj.contains(&(i, k)) && adj.contains(&(j, k)) {
+                        let mut group = vec![i, j, k];
+                        group.sort();
+                        groups.insert(group);
+                    }
+                }
+            }
+        }
+    }
+
+    groups
+}
 
 fn bonus(input: &str) -> String {
     // collect computer names in whatever order, so we can work with indices as names afterwards
@@ -91,51 +108,33 @@ fn bonus(input: &str) -> String {
     // build adjacency-matrix (between indices i,j)
     // ===
 
-    let mut adj = vec![vec![false; n]; n];
+    let mut adj = FxHashSet::default();
 
     for line in input.trim().lines() {
         let (a, b) = line.split_once("-").unwrap();
         let ai = index_of(&computers, &a).unwrap();
         let bi = index_of(&computers, &b).unwrap();
         for (i, j) in [(ai, bi), (bi, ai)] {
-            adj[i][j] = true;
-            adj[j][i] = true;
+            adj.insert((i, j));
+            adj.insert((j, i));
         }
     }
 
-    let mut groups = FxHashSet::default();
-
-    // first, find all groups of 3
-    // ===
-
-    for i in 0..n {
-        for j in 0..n {
-            if adj[i][j] {
-                for k in (j + 1)..n {
-                    if adj[i][k] && adj[j][k] {
-                        let mut group = vec![i, j, k];
-                        group.sort();
-                        groups.insert(group);
-                    }
-                }
-            }
-        }
-    }
+    let mut groups = find_triples(n, &adj);
 
     // then, iteratively extend groups where possible to size 4, 5, etc.. until only one group remains
-    let mut groups = groups.into_iter().collect_vec();
     let mut size = 3;
-    let mut any_largest = groups[0].clone();
+    let mut any_largest = groups.iter().next().unwrap().clone();
     loop {
         size += 1;
         println!("Extending groups to size {size}...");
 
         groups = groups
-            .into_iter()
+            .into_par_iter()
             .flat_map(|group| {
                 let mut expanded = vec![];
                 for i in 0..n {
-                    if !group.contains(&i) && group.iter().all(|&j| adj[i][j]) {
+                    if !group.contains(&i) && group.iter().all(|&j| adj.contains(&(i, j))) {
                         let mut group = group.clone();
                         group.push(i);
                         group.sort();
@@ -144,24 +143,19 @@ fn bonus(input: &str) -> String {
                 }
                 expanded
             })
-            .collect_vec();
+            .collect::<FxHashSet<_>>();
 
         if groups.len() > 0 {
-            any_largest = groups[0].clone();
+            any_largest = groups.iter().next().unwrap().clone();
         }
 
         println!("  -> now there's {}", groups.len());
         if groups.len() <= 1 {
-            return "done".to_owned();
+            break;
         }
     }
 
-    println!(
-        "Any largest: {}",
-        any_largest.into_iter().map(|i| computers[i]).join(", ")
-    );
-
-    "".into()
+    any_largest.into_iter().map(|i| computers[i]).join(",")
 }
 
 #[test]
