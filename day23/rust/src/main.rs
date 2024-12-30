@@ -75,13 +75,21 @@ fn index_of<T: Eq>(vec: &Vec<T>, el: &T) -> Option<usize> {
 // adj[i][j] : bool
 
 fn bonus(input: &str) -> String {
-    let computers = input
+    // collect computer names in whatever order, so we can work with indices as names afterwards
+    // ===
+
+    let mut computers = input
         .trim()
         .lines()
         .map(|line| line.split_once("-").unwrap().0)
         .collect_vec();
 
+    computers.sort();
+
     let n = computers.len();
+
+    // build adjacency-matrix (between indices i,j)
+    // ===
 
     let mut adj = vec![vec![false; n]; n];
 
@@ -97,6 +105,9 @@ fn bonus(input: &str) -> String {
 
     let mut groups = FxHashSet::default();
 
+    // first, find all groups of 3
+    // ===
+
     for i in 0..n {
         for j in 0..n {
             if adj[i][j] {
@@ -111,9 +122,44 @@ fn bonus(input: &str) -> String {
         }
     }
 
-    // let n2 = groups.len();
+    // then, iteratively extend groups where possible to size 4, 5, etc.. until only one group remains
+    let mut groups = groups.into_iter().collect_vec();
+    let mut size = 3;
+    let mut any_largest = groups[0].clone();
+    loop {
+        size += 1;
+        println!("Extending groups to size {size}...");
 
-    // let mut adj2 = vec!
+        groups = groups
+            .into_iter()
+            .flat_map(|group| {
+                let mut expanded = vec![];
+                for i in 0..n {
+                    if !group.contains(&i) && group.iter().all(|&j| adj[i][j]) {
+                        let mut group = group.clone();
+                        group.push(i);
+                        group.sort();
+                        expanded.push(group);
+                    }
+                }
+                expanded
+            })
+            .collect_vec();
+
+        if groups.len() > 0 {
+            any_largest = groups[0].clone();
+        }
+
+        println!("  -> now there's {}", groups.len());
+        if groups.len() <= 1 {
+            return "done".to_owned();
+        }
+    }
+
+    println!(
+        "Any largest: {}",
+        any_largest.into_iter().map(|i| computers[i]).join(", ")
+    );
 
     "".into()
 }
