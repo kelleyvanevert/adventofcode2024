@@ -114,26 +114,6 @@ fn solve(input: &str) -> usize {
 }
 
 fn bonus(input: &str) -> usize {
-    #[derive(Debug, Clone, PartialEq, Eq)]
-    struct Path(FxHashSet<State>, Pos, Dir, usize);
-
-    // lower score is better
-    impl Ord for Path {
-        fn cmp(&self, other: &Self) -> Ordering {
-            return other.3.cmp(&self.3);
-        }
-    }
-
-    impl PartialOrd for Path {
-        fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-            Some(self.cmp(other))
-        }
-    }
-
-    let max = solve(input);
-
-    println!("max = {max}");
-
     let mut grid = input
         .trim()
         .lines()
@@ -156,130 +136,193 @@ fn bonus(input: &str) -> usize {
     at!(ending) = '.';
     at!(reindeer) = '.';
 
-    let mut total_found = 0;
-    loop {
-        let mut found = 0;
+    let mut edges: FxHashSet<(Pos, Pos)> = FxHashSet::default();
 
-        for y in 1..(h - 2) {
-            for x in 1..(w - 2) {
-                if at!((x, y)) == '.'
-                    && [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)]
-                        .into_iter()
-                        .filter(|p| at!(p) == '#')
-                        .count()
-                        >= 3
-                {
-                    at!((x, y)) = '#';
-                    found += 1;
+    for x in (1..w).step_by(2) {
+        for y in (1..h).step_by(2) {
+            for (dx, dy) in [(-1, 0), (1, 0), (0, -1), (0, 1)] {
+                let n = (x + 2 * dx, y + 2 * dy);
+                if at!((x + dx, y + dy)) == '.' {
+                    // println!(
+                    //     "     edge from {:?} to {:?} because {:?} =.",
+                    //     (x, y),
+                    //     n,
+                    //     (x + dx, y + dy)
+                    // );
+                    edges.insert(((x, y), n));
+                    edges.insert((n, (x, y)));
+                } else {
+                    // println!(
+                    //     "  NO edge from {:?} to {:?} because {:?} !=.",
+                    //     (x, y),
+                    //     n,
+                    //     (x + dx, y + dy)
+                    // );
                 }
             }
         }
-        println!("loop {found}");
+    }
 
-        total_found += found;
-        if found == 0 {
+    // ==
+
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    struct Path {
+        pos: Pos,
+        dir: Dir,
+        path: Vec<State>,
+        cost: usize,
+    }
+
+    impl Path {
+        fn turn_counterclockwise(&self) -> Option<Path> {
+            let pos = self.pos;
+
+            let (dx, dy) = self.dir;
+            let dir = (dy, -dx);
+
+            if self.path.contains(&(pos, dir)) {
+                None
+            } else {
+                let mut path = self.path.clone();
+                path.push((pos, dir));
+
+                let cost = self.cost + 1000;
+
+                Some(Path {
+                    pos,
+                    dir,
+                    path,
+                    cost,
+                })
+            }
+        }
+
+        fn turn_clockwise(&self) -> Option<Path> {
+            let pos = self.pos;
+
+            let (dx, dy) = self.dir;
+            let dir = (-dy, dx);
+
+            if self.path.contains(&(pos, dir)) {
+                None
+            } else {
+                let mut path = self.path.clone();
+                path.push((pos, dir));
+
+                let cost = self.cost + 1000;
+
+                Some(Path {
+                    pos,
+                    dir,
+                    path,
+                    cost,
+                })
+            }
+        }
+
+        fn walk_forward(&self, edges: &FxHashSet<(Pos, Pos)>) -> Option<Path> {
+            let (x, y) = self.pos;
+            let (dx, dy) = self.dir;
+            let pos = (x + dx * 2, y + dy * 2);
+
+            let dir = self.dir;
+
+            if self.path.contains(&(pos, dir)) || !edges.contains(&(self.pos, pos)) {
+                None
+            } else {
+                let mut path = self.path.clone();
+                path.push(((x + dx, y + dy), dir));
+                path.push((pos, dir));
+
+                let cost = self.cost + 2;
+
+                Some(Path {
+                    pos,
+                    dir,
+                    path,
+                    cost,
+                })
+            }
+        }
+    }
+
+    // lower score is better
+    impl Ord for Path {
+        fn cmp(&self, other: &Self) -> Ordering {
+            return other.cost.cmp(&self.cost);
+        }
+    }
+
+    impl PartialOrd for Path {
+        fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+            Some(self.cmp(other))
+        }
+    }
+
+    let mut queue = BinaryHeap::new();
+    queue.push(Path {
+        pos: reindeer,
+        dir: (1, 0),
+        path: vec![(reindeer, (1, 0))],
+        cost: 0,
+    });
+
+    let mut lowest_cost_paths = vec![];
+    let lowest_cost = solve(input);
+    println!("known max: {lowest_cost}");
+
+    let mut it = 0;
+
+    while let Some(path) = queue.pop() {
+        it += 1;
+        if it % 100_000 == 0 {
+            println!("{it} - {}", path.cost);
+        }
+
+        if path.cost > lowest_cost {
+            // we're done
             break;
         }
-    }
 
-    println!(
-        "DONE {total_found} / {}",
-        grid.iter()
-            .map(|line| line.iter().filter(|&&c| c == '.').count())
-            .sum::<usize>()
-    );
-
-    // best-first search:
-    // - keep a list of paths (= beam), from best to worst, each with: (pos, dir, score)
-    // - keep popping the best off, and adding next steps
-    // - (we don't need to worry about recursive paths, because of their horrible score)
-
-    let mut reached = FxHashMap::default();
-    let mut eligible = FxHashSet::default();
-
-    let mut best = BinaryHeap::new();
-    best.push(Path(FxHashSet::default(), reindeer, (1, 0), 0));
-
-    while let Some(Path(prev, (x, y), (dx, dy), score)) = best.pop() {
-        if prev.contains(&((x, y), (dx, dy))) || prev.contains(&((x, y), (-dx, -dy))) {
+        if path.pos == ending {
+            // lowest_cost = path.cost;
+            lowest_cost_paths.push(path);
+            // println!("found path");
             continue;
         }
 
-        let mut curr = prev.clone();
-        curr.insert(((x, y), (dx, dy)));
+        // explore neighbors
+        for next in [
+            path.turn_counterclockwise(),
+            path.turn_clockwise(),
+            path.walk_forward(&edges),
+        ] {
+            if let Some(next_path) = next {
+                // println!(
+                //     "CAN walk from {:?} dir {:?} to {:?} dir {:?} -- COST is now {}",
+                //     path.pos, path.dir, next_path.pos, next_path.dir, next_path.cost
+                // );
 
-        if score > max {
-            continue;
-        }
+                // if next_path.pos.0 < 0 || next_path.pos.1 < 0 {
+                //     panic!();
+                // }
 
-        reached.insert(((x, y), (dx, dy)), score);
-
-        if (x, y) == ending {
-            // this is an end-path
-            for p in curr {
-                eligible.insert(p);
-            }
-            continue;
-        }
-
-        // counterclockwise
-        // (1, 0) -> (0, -1) -> (-1, 0) -> (0, 1)
-        if at!((x + dy, y - dx)) == '.' {
-            best.push(Path(curr.clone(), (x, y), (dy, -dx), score + 1000));
-        }
-
-        // clockwise
-        // (1, 0) -> (0, 1) -> (-1, 0) -> (0, -1)
-        if at!((x - dy, y + dx)) == '.' {
-            best.push(Path(curr.clone(), (x, y), (-dy, dx), score + 1000));
-        }
-
-        // // walk forward
-        // if at!((x + dx, y + dy)) == '.' {
-        //     let (mut x, mut y) = (x, y);
-        //     let mut score = score;
-
-        //     loop {
-        //         (x, y) = (x + dx, y + dy);
-        //         score += 1;
-
-        //         if at!((x, y)) == '#' {
-        //             // failed
-        //             break;
-        //         }
-        //         if at!((x + dy, y - dx)) == '.' || at!((x - dy, y + dx)) == '.' {
-        //             // success
-        //             best.push(Path(curr.clone(), (x, y), (dx, dy), score));
-        //             break;
-        //         }
-        //     }
-        // }
-
-        // walk forward
-        if at!((x + dx, y + dy)) == '.' {
-            let (mut x, mut y) = (x, y);
-            let mut score = score;
-
-            (x, y) = (x + dx, y + dy);
-            score += 1;
-
-            while at!((x, y)) == '.'
-                && at!((x + dy, y - dx)) == '#'
-                && at!((x - dy, y + dx)) == '#'
-                && at!((x + dx, y + dy)) == '.'
-            {
-                println!("walk extra step at {x},{y} dir {dx},{dy}");
-                (x, y) = (x + dx, y + dy);
-                score += 1;
-            }
-
-            if at!((x, y)) == '.' {
-                best.push(Path(curr.clone(), (x, y), (dx, dy), score));
+                queue.push(next_path);
             }
         }
     }
 
-    eligible.into_iter().map(|(pos, _)| pos).unique().count()
+    // println!("DONE, found these paths for the cost of {}:", lowest_cost);
+    // for path in lowest_cost_paths {
+    //     println!("  {:?}", path);
+    // }
+
+    let visited = lowest_cost_paths
+        .into_iter()
+        .flat_map(|path| path.path.into_iter().map(|(pos, _)| pos))
+        .collect::<FxHashSet<_>>();
+
+    visited.len()
 }
 
 #[test]
