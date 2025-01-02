@@ -11,7 +11,7 @@ fn main() {
     });
 
     time(|| {
-        // ±3ms
+        // ±200ms
         println!("Bonus: {}", bonus(input));
     });
 }
@@ -268,26 +268,28 @@ fn bonus(input: &str) -> usize {
     });
 
     let mut lowest_cost_paths = vec![];
-    let lowest_cost = solve(input);
-    println!("known max: {lowest_cost}");
+    let mut lowest_cost = usize::MAX;
 
-    let mut it = 0;
+    let mut reached = FxHashMap::default();
 
     while let Some(path) = queue.pop() {
-        it += 1;
-        if it % 100_000 == 0 {
-            println!("{it} - {}", path.cost);
+        if let Some(&s) = reached.get(&(path.pos, path.dir)) {
+            if path.cost > s {
+                // we've already seen a better score for that (pos+dir), so skip this branch
+                continue;
+            }
         }
 
+        reached.insert((path.pos, path.dir), path.cost);
+
         if path.cost > lowest_cost {
-            // we're done
+            // we're done, because all next paths from the queue will have a higher cost yet
             break;
         }
 
         if path.pos == ending {
-            // lowest_cost = path.cost;
+            lowest_cost = path.cost;
             lowest_cost_paths.push(path);
-            // println!("found path");
             continue;
         }
 
@@ -298,24 +300,10 @@ fn bonus(input: &str) -> usize {
             path.walk_forward(&edges),
         ] {
             if let Some(next_path) = next {
-                // println!(
-                //     "CAN walk from {:?} dir {:?} to {:?} dir {:?} -- COST is now {}",
-                //     path.pos, path.dir, next_path.pos, next_path.dir, next_path.cost
-                // );
-
-                // if next_path.pos.0 < 0 || next_path.pos.1 < 0 {
-                //     panic!();
-                // }
-
                 queue.push(next_path);
             }
         }
     }
-
-    // println!("DONE, found these paths for the cost of {}:", lowest_cost);
-    // for path in lowest_cost_paths {
-    //     println!("  {:?}", path);
-    // }
 
     let visited = lowest_cost_paths
         .into_iter()
