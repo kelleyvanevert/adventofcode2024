@@ -160,3 +160,15 @@ Grid after:
 ```
 
 Indeed, 504 moves in 😅 You can see it going wrong. As soon as I found this little bug, the algorithm worked and I was able to compute the answer, in about 3ms 💪
+
+## Day 16, 17
+
+Pretty hard! Of both these days, I'm (still) having a hard time getting the bonus :P
+
+_Update: I solved the bonus of day 16 on Jan 2nd_
+
+## The rest...
+
+I started slacking after the previous two days, because of a combo of wanting to proceed sequentially, and having other things to do :P
+
+I'll be solving the rest still, but not anymore in the structured, daily, documented way that I've been doing up until now :)
