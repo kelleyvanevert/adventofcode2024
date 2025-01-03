@@ -18,9 +18,9 @@ See https://adventofcode.com/2024
        - Clone [my 2023 Advent of Code repo](https://github.com/kelleyvanevert/adventofcode2023)
        - Build and install it with `build.sh` in the `./adventlang` dir
 
-## Shout-out to my favorite Rust crates
+## Shout-out to my go-to Rust crates
 
-Here's the five crates that I've found myself needing to solve this year's Advent of Code:
+Here's the five crates that I've found myself pretty much always using to solve this and previous year's Advent of Code:
 
 | Crate | why |
 | --- | --- |
