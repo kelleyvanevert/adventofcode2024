@@ -8,6 +8,28 @@ See https://adventofcode.com/2024
 - Friends also participating:
   - [Auke](https://github.com/Fadarrizz/advent-of-code/tree/main/2024/)
 
+## Getting started
+
+1. Decrypt the input files with `./decrypt.sh <password>`, of add your own (to e.g. `./inputs/input_09.txt`)
+2. Some days are coded in AL (Adventlang), others in Rust.
+   - For the Rust days, just run them with `cargo run --release` from within the Rust day's project dir
+   - For the AL days, run them from the root project dir like so: `al run -t day09/al/main.al < inputs/input_09.txt`
+     - How to get the `al` binary:
+       - Clone [my 2023 Advent of Code repo](https://github.com/kelleyvanevert/adventofcode2023)
+       - Build and install it with `build.sh` in the `./adventland` dir
+
+## Shout-out to my favorite Rust crates
+
+Here's the five crates that I've found myself needing to solve this year's Advent of Code:
+
+| Crate | why |
+| --- | --- |
+| [fxhash](https://docs.rs/ccl-fxhash/latest/fxhash/) | This is my go-to HashMap and HashSet crate. It's way faster than the stdlib defaults, at the cost of being not cryptographically secure, which I don't need here anyway. |
+| [itertools](https://docs.rs/itertools/latest/itertools/) | Just so many useful swiss armyknife thingies related to iterators... I use `collect_vec`, `all`, `any`, `chain`, `sorted` etc. all the time |
+| [cached](https://docs.rs/cached/0.54.0/cached/) | Super easy dynamic programming! Just stick `#[cached]` onto your `fn` |
+| [rayon](https://docs.rs/rayon/latest/rayon/) | Super easy parallelization with things like `into_par_iter` — it's a fun way to get my solution down to under a second again :) |
+| [binary-heap-plus](https://docs.rs/binary-heap-plus/latest/binary_heap_plus/) | I only started using this on day 18, but it seems like something I've been missing for a long time. Instead of having to define a new type and implement `PartialOrd` and `Ord` before I can start implementing search algorithms with a `BinaryHeap`, I can now just use `BinaryHeap::new_by_key(..)` — amazing! |
+
 ## Day 1
 
 Solved in Google Sheets, because Chen said "Oh, I don't need to learn Python for this, I can just do it in Excel!"
