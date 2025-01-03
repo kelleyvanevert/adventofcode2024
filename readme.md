@@ -167,8 +167,24 @@ Pretty hard! Of both these days, I'm (still) having a hard time getting the bonu
 
 _Update: I solved the bonus of day 16 on Jan 2nd_
 
-## The rest...
+## Day 19
+
+Not as easy as you'd think, and very rewarding to solve! The trick is to divide the pattern up as strategically as possible, instead of just starting from the start an working your way down to the end. See the comments in the code!
+
+## Slacking...
 
 I started slacking after the previous two days, because of a combo of wanting to proceed sequentially, and having other things to do :P
 
 I'll be solving the rest still, but not anymore in the structured, daily, documented way that I've been doing up until now :)
+
+## Day 21, 22, 23
+
+Fun :) Able to solve them before new year's even, is all I'll say about it
+
+## Day 18, 20
+
+Not too hard — I had a fun time on Jan 2nd + 3rd solving these :)
+
+## Day 24
+
+The first part is easily doable, the second part .. will indeed require Z3 again, like the day 24's bonus of previous years :P I haven't gotten around to taking enough to think this one through yet...
