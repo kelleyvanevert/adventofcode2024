@@ -12,10 +12,10 @@ fn main() {
         println!("First part: {}", solve(71, 1024, input));
     });
 
-    // time(|| {
-    //     // ±3ms
-    //     println!("Bonus: {}", bonus(input));
-    // });
+    time(|| {
+        // <1ms
+        println!("Bonus: {}", bonus(71, input));
+    });
 }
 
 // macro_rules! vprintln {
@@ -33,18 +33,7 @@ where
 
 type Pos = (i32, i32);
 
-fn solve(dim: i32, num_corrupted: usize, input: &str) -> usize {
-    let blocked = input
-        .trim()
-        .lines()
-        .take(num_corrupted)
-        .map(|line| {
-            line.split_once(",")
-                .unwrap()
-                .map(|s| s.parse::<i32>().unwrap())
-        })
-        .collect::<FxHashSet<_>>();
-
+fn find_shortest_path(dim: i32, blocked: &FxHashSet<Pos>) -> Option<usize> {
     let start = (0, 0);
     let end = (dim - 1, dim - 1);
 
@@ -65,7 +54,7 @@ fn solve(dim: i32, num_corrupted: usize, input: &str) -> usize {
         reached.insert((x, y), cost);
 
         if (x, y) == end {
-            return cost;
+            return Some(cost);
         }
 
         for (nx, ny) in [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)] {
@@ -77,11 +66,73 @@ fn solve(dim: i32, num_corrupted: usize, input: &str) -> usize {
         }
     }
 
-    unreachable!("algorithm should already have found a path")
+    None
 }
 
-fn bonus(input: &str) -> usize {
-    0
+fn solve(dim: i32, num_corrupted: usize, input: &str) -> usize {
+    let blocked = input
+        .trim()
+        .lines()
+        .take(num_corrupted)
+        .map(|line| {
+            line.split_once(",")
+                .unwrap()
+                .map(|s| s.parse::<i32>().unwrap())
+        })
+        .collect::<FxHashSet<_>>();
+
+    find_shortest_path(dim, &blocked).unwrap()
+}
+
+fn bonus(dim: i32, input: &str) -> String {
+    let blocked = input
+        .trim()
+        .lines()
+        .map(|line| {
+            line.split_once(",")
+                .unwrap()
+                .map(|s| s.parse::<i32>().unwrap())
+        })
+        .collect_vec();
+
+    let n = blocked.len();
+
+    let get_blocked_up_to = |k: usize| {
+        return FxHashSet::from_iter(blocked[0..k].iter().cloned());
+    };
+
+    let mut lo = 0;
+    let mut hi = n;
+
+    let mut k = n / 2;
+
+    loop {
+        // print!("{k} ?");
+        match find_shortest_path(dim, &get_blocked_up_to(k)) {
+            // impossible to find route after k blocking bytes
+            None => {
+                // println!("  impossible: {lo} .. {k} .. {hi}");
+                hi = k;
+            }
+
+            // we CAN still find a route after k blocking bytes
+            Some(_) => {
+                // println!("  POSSIBLE: {lo} .. {k} .. {hi}");
+                lo = k;
+            }
+        }
+
+        let next_k = lo + (hi - lo) / 2;
+        if k == next_k {
+            println!("  END {lo} {hi}");
+            break;
+        }
+
+        k = next_k;
+    }
+
+    let (x, y) = blocked[hi - 1];
+    format!("{x},{y}")
 }
 
 #[test]
@@ -119,5 +170,39 @@ fn test() {
 "
         ),
         22
+    );
+
+    assert_eq!(
+        bonus(
+            7,
+            "
+5,4
+4,2
+4,5
+3,0
+2,1
+6,3
+2,4
+1,5
+0,6
+3,3
+2,6
+5,1
+1,2
+5,5
+2,5
+6,5
+1,4
+0,4
+6,4
+1,1
+6,1
+1,0
+0,5
+1,6
+2,0
+"
+        ),
+        "6,1"
     );
 }
