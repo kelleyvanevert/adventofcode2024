@@ -210,3 +210,7 @@ Not too hard — I had a fun time on Jan 2nd + 3rd solving these :)
 ## Day 24
 
 The first part is easily doable, the second part .. will indeed require Z3 again, like the day 24's bonus of previous years :P I haven't gotten around to taking enough to think this one through yet...
+
+## Day 25
+
+First part's easy, but ... I'mma have to solve day 17's bonus + day 24's bonus first, before I can complete 25's bonus, as expected 😅
