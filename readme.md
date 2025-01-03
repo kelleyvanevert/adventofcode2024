@@ -16,7 +16,7 @@ See https://adventofcode.com/2024
    - For the AL days, run them from the root project dir like so: `al run -t day09/al/main.al < inputs/input_09.txt`
      - How to get the `al` binary:
        - Clone [my 2023 Advent of Code repo](https://github.com/kelleyvanevert/adventofcode2023)
-       - Build and install it with `build.sh` in the `./adventland` dir
+       - Build and install it with `build.sh` in the `./adventlang` dir
 
 ## Shout-out to my favorite Rust crates
 
