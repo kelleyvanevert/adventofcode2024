@@ -112,41 +112,39 @@ fn bonus(input: &str) -> String {
     }
 
     // add equations
-    for wire in wires.lines() {
-        let (a, op, b, _, out) = wire.split(" ").collect_tuple().unwrap();
+    let equations = wires
+        .lines()
+        .map(|wire| {
+            let (a, op, b, _, out) = wire.split(" ").collect_tuple().unwrap();
 
-        if !nodes.contains_key(a) {
-            nodes.insert(a.to_string(), ast::BV::new_const(&ctx, a, 1));
-        }
+            if !nodes.contains_key(a) {
+                nodes.insert(a.to_string(), ast::BV::new_const(&ctx, a, 1));
+            }
 
-        if !nodes.contains_key(b) {
-            nodes.insert(b.to_string(), ast::BV::new_const(&ctx, b, 1));
-        }
+            if !nodes.contains_key(b) {
+                nodes.insert(b.to_string(), ast::BV::new_const(&ctx, b, 1));
+            }
 
-        if !nodes.contains_key(out) {
-            nodes.insert(out.to_string(), ast::BV::new_const(&ctx, out, 1));
-        }
+            if !nodes.contains_key(out) {
+                nodes.insert(out.to_string(), ast::BV::new_const(&ctx, out, 1));
+            }
 
-        let node_a = nodes.get(a).unwrap();
-        let node_b = nodes.get(b).unwrap();
-        let node_out = nodes.get(out).unwrap();
+            let node_a = nodes.get(a).unwrap();
+            let node_b = nodes.get(b).unwrap();
+            let node_out = nodes.get(out).unwrap();
 
-        match &op[..] {
-            "AND" => solver.assert(&node_a.bvadd(&node_b)._eq(&node_out)),
-            "OR" => solver.assert(&node_a.bvor(&node_b)._eq(&node_out)),
-            "XOR" => solver.assert(&node_a.bvxor(&node_b)._eq(&node_out)),
-            _ => unreachable!(),
-        }
-    }
+            match &op[..] {
+                "AND" => node_a.bvadd(&node_b)._eq(&node_out),
+                "OR" => node_a.bvor(&node_b)._eq(&node_out),
+                "XOR" => node_a.bvxor(&node_b)._eq(&node_out),
+                _ => unreachable!(),
+            }
+        })
+        .collect_vec();
 
-    solver.assert(&ast::forall_const(
-        &ctx,
-        &[&x, &y],
-        &[],
-        &ast::BV::bvadd(&x, &y)._eq(&z),
-    ));
+    let equations_hold = &ast::Bool::and(&ctx, &equations.iter().collect_vec());
 
-    // solver.assert(&ast::BV::bvadd(&x, &y)._eq(&z));
+    solver.assert(&equations_hold.implies(&ast::BV::bvadd(&x, &y)._eq(&z)));
 
     println!("{}", solver);
 
