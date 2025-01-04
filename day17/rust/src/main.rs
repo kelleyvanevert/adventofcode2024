@@ -1,6 +1,8 @@
+use ast::Ast;
 use itertools::Itertools;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 use std::time::Instant;
+use z3::*;
 
 fn main() {
     let input = include_str!("../../../inputs/input_17.txt");
@@ -11,8 +13,9 @@ fn main() {
     });
 
     time(|| {
-        // ±3ms
-        println!("Bonus: {}", bonus_smart(input));
+        // // ±3ms
+        // println!("Bonus: {}", bonus_smart(input));
+        println!("Bonus: {}", bonus_revisited(input));
     });
 }
 
@@ -198,6 +201,20 @@ fn bits(n: i64) -> [u8; 3] {
     }
 }
 
+fn bits2(n: i64) -> [u8; 3] {
+    match n {
+        0 => [0, 0, 0],
+        1 => [0, 0, 1],
+        2 => [0, 1, 0],
+        3 => [0, 1, 1],
+        4 => [1, 0, 0],
+        5 => [1, 0, 1],
+        6 => [1, 1, 0],
+        7 => [1, 1, 1],
+        _ => unreachable!("won't get bits of {n}"),
+    }
+}
+
 // All too high
 // Trying 0...
 // Trying 1...
@@ -332,6 +349,127 @@ fn bonus_smart(input: &str) -> i64 {
 
         // check it
         {
+            let mut registers = registers.clone();
+            registers[0] = num;
+            let (_, output, steps) = execute(registers, &instructions);
+            println!("  did it work? {output:?}");
+            if output == instructions {
+                println!("    YESYES!!");
+            } else {
+                println!("    no :(");
+            }
+        }
+    }
+
+    0
+}
+
+fn bonus_revisited(input: &str) -> i64 {
+    let cfg = Config::new();
+    let ctx = Context::new(&cfg);
+    let solver = Solver::new(&ctx);
+
+    let outputs = [2, 4, 1, 5, 7, 5, 4, 5, 0, 3, 1, 6, 5, 5, 3, 0];
+
+    let zero = &ast::Int::from_i64(&ctx, 0);
+    let one = &ast::Int::from_i64(&ctx, 1);
+    let two = &ast::Int::from_i64(&ctx, 2);
+
+    // t [i in 0..16] [0,1,2]
+    let t = outputs
+        .iter()
+        .map(|&t| bits(t).map(|b| ast::Bool::from_bool(&ctx, b == 1)))
+        .collect_vec();
+
+    // a[i in 0..48]
+    let mut a = ast::Array::new_const(&ctx, "a", &Sort::int(&ctx), &Sort::int(&ctx));
+    let a_bits = (0..90)
+        .map(|i| {
+            let bit = ast::Int::new_const(&ctx, format!("a_{i}"));
+            if i < 48 {
+                solver.assert(&ast::Bool::or(&ctx, &[&bit._eq(&zero), &bit._eq(&one)]));
+            } else {
+                solver.assert(&bit._eq(&zero));
+            }
+            a = a.store(&ast::Int::from_i64(&ctx, i as _), &bit); // assign ?
+            bit
+        })
+        .collect_vec();
+
+    // s[i in 0..16] = 4*a_{3i+2} + 2*a_{3i+1} + a_{3i}
+    let s = (0..16)
+        .map(|i| {
+            let neg_a_3i = ast::Int::sub(&ctx, &[&one, &a_bits[3 * i]]);
+            let neg_a_3i2 = ast::Int::sub(&ctx, &[&one, &a_bits[3 * i + 2]]);
+
+            let s = &neg_a_3i
+                + &a_bits[3 * i + 1]
+                + &a_bits[3 * i + 1]
+                + &neg_a_3i2
+                + &neg_a_3i2
+                + &neg_a_3i2
+                + &neg_a_3i2;
+
+            // solver.assert()
+
+            s
+        })
+        .collect_vec();
+
+    for i in 0..16 {
+        solver.assert(
+            &a_bits[3 * i]
+                ._eq(&a.select(&s[i]).as_int().unwrap())
+                ._eq(&t[i][0]),
+        );
+
+        solver.assert(
+            &a_bits[3 * i + 1]
+                ._eq(
+                    &a.select(&ast::Int::add(&ctx, &[&s[i], &one]))
+                        .as_int()
+                        .unwrap(),
+                )
+                ._eq(&t[i][1]),
+        );
+
+        solver.assert(
+            &a_bits[3 * i + 2]
+                ._eq(
+                    &a.select(&ast::Int::add(&ctx, &[&s[i], &two]))
+                        .as_int()
+                        .unwrap(),
+                )
+                .not()
+                ._eq(&t[i][2]),
+        );
+    }
+
+    println!();
+    println!("finding a model for:");
+    println!();
+    println!("{}", solver);
+
+    let sol = solver.check();
+    println!("solvable? {:?}", sol);
+    if sol == SatResult::Sat {
+        let model = solver.get_model().unwrap();
+        let num = a_bits
+            .iter()
+            .enumerate()
+            .map(|(i, bit)| {
+                let bitval = model.eval(bit, true).unwrap().as_i64().unwrap();
+                println!("a_{i} = {}", bitval);
+                bitval << i
+            })
+            .sum::<i64>();
+
+        println!("final solution -> {num}");
+
+        // check it
+        {
+            println!("let's check it...");
+            let (registers, instructions) = parse(input);
             let mut registers = registers.clone();
             registers[0] = num;
             let (_, output, steps) = execute(registers, &instructions);
