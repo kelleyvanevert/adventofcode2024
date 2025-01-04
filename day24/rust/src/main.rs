@@ -1,7 +1,9 @@
-use fxhash::FxHashMap;
+use ast::Ast;
+use fxhash::{FxHashMap, FxHashSet};
 use itertools::Itertools;
 use rayon::prelude::*;
 use std::time::Instant;
+use z3::*;
 
 fn main() {
     let input = include_str!("../../../inputs/input_24.txt");
@@ -11,10 +13,10 @@ fn main() {
         println!("First part: {}", solve(input));
     });
 
-    // time(|| {
-    //     // ±2s
-    //     println!("Bonus: {}", bonus(input));
-    // });
+    time(|| {
+        // ?
+        println!("Bonus: {}", bonus(input));
+    });
 }
 
 // macro_rules! vprintln {
@@ -81,8 +83,87 @@ fn solve(input: &'static str) -> usize {
         .sum()
 }
 
-fn bonus(input: &str) -> usize {
-    0
+fn bonus(input: &str) -> String {
+    let (_, wires) = input.trim().split_once("\n\n").unwrap();
+
+    let cfg = Config::new();
+    let ctx = Context::new(&cfg);
+    // let solver = Optimize::new(&ctx);
+    let solver = Solver::new(&ctx);
+
+    let x = ast::BV::new_const(&ctx, "x", 45);
+    let y = ast::BV::new_const(&ctx, "y", 45);
+    let z = ast::BV::new_const(&ctx, "z", 45);
+
+    // x.extract(high, low)
+
+    // solver.assert(&x._eq(&ast::BV::from_int(&ast::Int::from_i64(&ctx, 5), 45)));
+    // solver.assert(&y._eq(&ast::BV::from_int(&ast::Int::from_i64(&ctx, 5), 45)));
+    // solver.assert(&ast::BV::bvadd(&x, &y));
+    // solver.assert(&x.extract(5, 5)._eq(&ast::BV::from_u64(&ctx, 1, 1)));
+
+    let mut nodes = FxHashMap::default();
+
+    // add x's and y's and z's bit nodes
+    for i in 0..45 {
+        nodes.insert(format!("x{i:02}"), x.extract(i, i));
+        nodes.insert(format!("y{i:02}"), y.extract(i, i));
+        nodes.insert(format!("z{i:02}"), z.extract(i, i));
+    }
+
+    // add equations
+    for wire in wires.lines() {
+        let (a, op, b, _, out) = wire.split(" ").collect_tuple().unwrap();
+
+        if !nodes.contains_key(a) {
+            nodes.insert(a.to_string(), ast::BV::new_const(&ctx, a, 1));
+        }
+
+        if !nodes.contains_key(b) {
+            nodes.insert(b.to_string(), ast::BV::new_const(&ctx, b, 1));
+        }
+
+        if !nodes.contains_key(out) {
+            nodes.insert(out.to_string(), ast::BV::new_const(&ctx, out, 1));
+        }
+
+        let node_a = nodes.get(a).unwrap();
+        let node_b = nodes.get(b).unwrap();
+        let node_out = nodes.get(out).unwrap();
+
+        match &op[..] {
+            "AND" => solver.assert(&node_a.bvadd(&node_b)._eq(&node_out)),
+            "OR" => solver.assert(&node_a.bvor(&node_b)._eq(&node_out)),
+            "XOR" => solver.assert(&node_a.bvxor(&node_b)._eq(&node_out)),
+            _ => unreachable!(),
+        }
+    }
+
+    solver.assert(&ast::forall_const(
+        &ctx,
+        &[&x, &y],
+        &[],
+        &ast::BV::bvadd(&x, &y)._eq(&z),
+    ));
+
+    // solver.assert(&ast::BV::bvadd(&x, &y)._eq(&z));
+
+    println!("{}", solver);
+
+    match solver.check() {
+        SatResult::Sat => {
+            let model = solver.get_model().unwrap();
+            println!("sat, with x = {}", model.eval(&x, true).unwrap());
+        }
+        SatResult::Unknown => {
+            panic!("sat::unknown :(")
+        }
+        SatResult::Unsat => {
+            panic!("sat::unsat :(")
+        }
+    }
+
+    "".to_string()
 }
 
 #[test]
@@ -140,5 +221,32 @@ tnw OR pbm -> gnj
 "
         ),
         2024
+    );
+
+    assert_eq!(
+        bonus(
+            "
+x00: 0
+x01: 1
+x02: 0
+x03: 1
+x04: 0
+x05: 1
+y00: 0
+y01: 0
+y02: 1
+y03: 1
+y04: 0
+y05: 1
+
+x00 AND y00 -> z05
+x01 AND y01 -> z02
+x02 AND y02 -> z01
+x03 AND y03 -> z03
+x04 AND y04 -> z04
+x05 AND y05 -> z00
+"
+        ),
+        "z00,z01,z02,z05".to_string()
     );
 }
