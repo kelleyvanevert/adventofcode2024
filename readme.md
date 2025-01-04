@@ -195,6 +195,46 @@ _Update: I finally solved day 17's bonus on Jan 4th, after a LOT of struggling w
 
 ![](./impressions/day17_paper.jpg)
 
+_To get to the Z3 solution, I first analyzed specifically my input's program, which reads: `2,4,1,5,7,5,4,5,0,3,1,6,5,5,3,0`. In pseudocode, this reads:_
+
+```
+while A > 0 {
+  B <- A
+  B <- B xor `101`
+  C <- floor(A / 2^B)
+  B <- B xor C
+  A <- floor(A / 2^3)   --i.e.--   A <- A >> 3
+  B <- B xor `110`
+  output(B % 8)
+}
+```
+
+_The initial values of the `B` and `C` registers are not important. Basically, the program just iteratively takes the next three bits from `A`, does some stuff with it to produce three bits, and then outputs these as a number. We know what these output numbers should be, and there's a relation between the output and `A`, but it's not just the three bits, because there's a weird "shifting" going on as well. It took me some painstaking bit-tracking, but it can be written like so:_
+
+```math
+\begin{aligned}
+(a_{3i+2} \ne a_{s_i+2}) &= t_{i,2} \\
+(a_{3i+1} = a_{s_i+1}) &= t_{i,1} \\
+(a_{3i+0} = a_{s_i+0}) &= t_{i,0}
+\end{aligned}
+```
+
+_in which $s_i$ is defined by these bits:_
+
+```math
+s_i := \langle \; \neg a_{3i+2} \;\; a_{3i+1} \;\; \neg a_{3i+0} \; \rangle
+```
+
+_and the i-th output number contains these bits:_
+
+```math
+t_i := \langle \; t_{i,2} \;\; t_{i,1} \;\; t_{i,0} \; \rangle
+```
+
+_Essentially, each subsequent outputted number $t_i$ is determined by a "quirky" combination of a subsequent segment of three bits of the original `A`, as well as a three-bit segment a bit further down in the original `A`, in which the "further-down-ness" is determined by $s_i$, itself a quirky reinterpretation of the subsequent three-bit segment of `A`._
+
+_After some painstaking effort and details gone wrong, I was able to put all these equations into Z3 in the right way, and then solved for minimal `A`. Interestingly, this is only really possible by Z3's feature of "arrays", by which I was able to do the weird "shifting thing", i.e. indexing `a[si+1]` where `si` is itself already a variable. Impressive, Z3!_
+
 ## Day 19
 
 Not as easy as you'd think, and very rewarding to solve! The trick is to divide the pattern up as strategically as possible, instead of just starting from the start an working your way down to the end. See the comments in the code!
