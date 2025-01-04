@@ -16,6 +16,7 @@ fn main() {
         // // ±3ms
         // println!("Bonus: {}", bonus_smart(input));
         println!("Bonus: {}", bonus_revisited(input));
+        // println!("Bonus: {}", bonus_revisited_v2(input));
     });
 }
 
@@ -417,16 +418,21 @@ fn bonus_revisited(input: &str) -> i64 {
         .collect_vec();
 
     for i in 0..16 {
+        let k = ast::Int::from_i64(&ctx, i as i64 * 3);
         solver.assert(
             &a_bits[3 * i]
-                ._eq(&a.select(&s[i]).as_int().unwrap())
+                ._eq(
+                    &a.select(&ast::Int::add(&ctx, &[&k, &s[i], &zero]))
+                        .as_int()
+                        .unwrap(),
+                )
                 ._eq(&t[i][0]),
         );
 
         solver.assert(
             &a_bits[3 * i + 1]
                 ._eq(
-                    &a.select(&ast::Int::add(&ctx, &[&s[i], &one]))
+                    &a.select(&ast::Int::add(&ctx, &[&k, &s[i], &one]))
                         .as_int()
                         .unwrap(),
                 )
@@ -436,7 +442,7 @@ fn bonus_revisited(input: &str) -> i64 {
         solver.assert(
             &a_bits[3 * i + 2]
                 ._eq(
-                    &a.select(&ast::Int::add(&ctx, &[&s[i], &two]))
+                    &a.select(&ast::Int::add(&ctx, &[&k, &s[i], &two]))
                         .as_int()
                         .unwrap(),
                 )
@@ -467,6 +473,7 @@ fn bonus_revisited(input: &str) -> i64 {
         println!("final solution -> {num}");
 
         // check it
+        // 109019930332937 is CORRECT but TOO HIGH
         {
             println!("let's check it...");
             let (registers, instructions) = parse(input);
@@ -479,6 +486,77 @@ fn bonus_revisited(input: &str) -> i64 {
             } else {
                 println!("    no :(");
             }
+        }
+    }
+
+    0
+}
+
+fn set_and_diff(bit: u8, check: u8) -> bool {
+    bit < 2 && bit != check
+}
+
+fn bonus_revisited_v2(input: &str) -> i64 {
+    type Bit = u8; // 0 | 1 | 2(unknown)
+    type Pattern = Vec<u8>; // from least sign. to highest sign.
+
+    let mut possible: Vec<Pattern> = vec![vec![]];
+
+    let outputs = [2, 4, 1, 5, 7, 5, 4, 5, 0, 3, 1, 6, 5, 5, 3, 0];
+
+    fn ensure(
+        k: usize,
+        pattern: &Pattern,
+        a0: u8,
+        a1: u8,
+        a2: u8,
+        t0: u8,
+        t1: u8,
+        t2: u8,
+    ) -> Option<Pattern> {
+        if set_and_diff(pattern[k + 0], a0)
+            || set_and_diff(pattern[k + 1], a1)
+            || set_and_diff(pattern[k + 2], a2)
+        {
+            return None;
+        }
+
+        let mut pattern = pattern.clone();
+
+        pattern[k + 0] = a0;
+        pattern[k + 1] = a1;
+        pattern[k + 2] = a2;
+
+        let s = (1 - a0) + 2 * a1 + 4 * (1 - a2);
+        if t0 == 1 {
+            // pattern[k + s]
+            // todo
+        }
+
+        Some(pattern)
+    }
+
+    for (i, &n) in outputs[0..1].iter().enumerate() {
+        let [t0, t1, t2] = bits(n);
+
+        println!("Considering next output #{i} = {n} ...");
+        println!("  atm there's {} possible patterns", possible.len());
+        possible = possible
+            .into_iter()
+            .map(|mut pattern| {
+                pattern.resize(3 * (i + 1), 2);
+                pattern
+            })
+            .cartesian_product([0, 1, 2, 3, 4, 5, 6, 7])
+            .flat_map(|(pattern, a_segment)| {
+                let [a0, a1, a2] = bits(a_segment);
+                ensure(i * 3, &pattern, a0, a1, a2, t0, t1, t2)
+            })
+            // .filter_map(|b| b)
+            .collect_vec();
+        println!("  -> now there's {} possible patterns", possible.len());
+        for pattern in &possible {
+            println!("    {pattern:?}");
         }
     }
 
