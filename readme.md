@@ -22,12 +22,12 @@ See https://adventofcode.com/2024
 
 Here's the five crates that I've found myself pretty much always using to solve this and previous year's Advent of Code:
 
-| Crate | why |
-| --- | --- |
-| [fxhash](https://docs.rs/ccl-fxhash/latest/fxhash/) | This is my go-to HashMap and HashSet crate. It's way faster than the stdlib defaults, at the cost of being not cryptographically secure, which I don't need here anyway. |
-| [itertools](https://docs.rs/itertools/latest/itertools/) | Just so many useful swiss armyknife thingies related to iterators... I use `collect_vec`, `all`, `any`, `chain`, `sorted` etc. all the time |
-| [cached](https://docs.rs/cached/0.54.0/cached/) | Super easy dynamic programming! Just stick `#[cached]` onto your `fn` |
-| [rayon](https://docs.rs/rayon/latest/rayon/) | Super easy parallelization with things like `into_par_iter` — it's a fun way to get my solution down to under a second again :) |
+| Crate                                                                         | why                                                                                                                                                                                                                                                                                                               |
+| ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [fxhash](https://docs.rs/ccl-fxhash/latest/fxhash/)                           | This is my go-to HashMap and HashSet crate. It's way faster than the stdlib defaults, at the cost of being not cryptographically secure, which I don't need here anyway.                                                                                                                                          |
+| [itertools](https://docs.rs/itertools/latest/itertools/)                      | Just so many useful swiss armyknife thingies related to iterators... I use `collect_vec`, `all`, `any`, `chain`, `sorted` etc. all the time                                                                                                                                                                       |
+| [cached](https://docs.rs/cached/0.54.0/cached/)                               | Super easy dynamic programming! Just stick `#[cached]` onto your `fn`                                                                                                                                                                                                                                             |
+| [rayon](https://docs.rs/rayon/latest/rayon/)                                  | Super easy parallelization with things like `into_par_iter` — it's a fun way to get my solution down to under a second again :)                                                                                                                                                                                   |
 | [binary-heap-plus](https://docs.rs/binary-heap-plus/latest/binary_heap_plus/) | I only started using this on day 18, but it seems like something I've been missing for a long time. Instead of having to define a new type and implement `PartialOrd` and `Ord` before I can start implementing search algorithms with a `BinaryHeap`, I can now just use `BinaryHeap::new_by_key(..)` — amazing! |
 
 ## Day 1
@@ -188,6 +188,12 @@ Indeed, 504 moves in 😅 You can see it going wrong. As soon as I found this li
 Pretty hard! Of both these days, I'm (still) having a hard time getting the bonus :P
 
 _Update: I solved the bonus of day 16 on Jan 2nd_
+
+_Update: I finally solved day 17's bonus on Jan 4th, after a LOT of struggling with bit patterns and multiple different attempts and strategies :P I kinda cheated in the end though, using Z3 to solve the system of equations about `A`'s bit pattern, while minimizing `A`. I was also just about to code another attempt that's more hand-crafted, after failing at getting the Z3 solution to work, while I found a bug in my Z3 solution, the fixing of which led to the right solution. Here's some pics of the process:_
+
+![](./impressions/day17_crafting.png)
+
+![](./impressions/day17_paper.jpg)
 
 ## Day 19
 
