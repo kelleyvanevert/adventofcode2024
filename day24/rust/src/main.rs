@@ -15,7 +15,7 @@ fn main() {
 
     time(|| {
         // ?
-        println!("Bonus: {}", bonus(input));
+        println!("Bonus: {}", bonus(input, 46, "add"));
     });
 }
 
@@ -83,29 +83,29 @@ fn solve(input: &'static str) -> usize {
         .sum()
 }
 
-fn bonus(input: &str) -> String {
-    let (_, wires) = input.trim().split_once("\n\n").unwrap();
+fn bonus(input: &str, size: u32, goal: &str) -> String {
+    let (init, wires) = input.trim().split_once("\n\n").unwrap();
 
     let cfg = Config::new();
     let ctx = Context::new(&cfg);
     // let solver = Optimize::new(&ctx);
     let solver = Solver::new(&ctx);
 
-    let x = ast::BV::new_const(&ctx, "x", 45);
-    let y = ast::BV::new_const(&ctx, "y", 45);
-    let z = ast::BV::new_const(&ctx, "z", 45);
+    let x = ast::BV::new_const(&ctx, "x", size);
+    let y = ast::BV::new_const(&ctx, "y", size);
+    let z = ast::BV::new_const(&ctx, "z", size);
 
     // x.extract(high, low)
 
-    // solver.assert(&x._eq(&ast::BV::from_int(&ast::Int::from_i64(&ctx, 5), 45)));
-    // solver.assert(&y._eq(&ast::BV::from_int(&ast::Int::from_i64(&ctx, 5), 45)));
+    // solver.assert(&x._eq(&ast::BV::from_int(&ast::Int::from_i64(&ctx, 5), size)));
+    // solver.assert(&y._eq(&ast::BV::from_int(&ast::Int::from_i64(&ctx, 5), size)));
     // solver.assert(&ast::BV::bvadd(&x, &y));
     // solver.assert(&x.extract(5, 5)._eq(&ast::BV::from_u64(&ctx, 1, 1)));
 
     let mut nodes = FxHashMap::default();
 
     // add x's and y's and z's bit nodes
-    for i in 0..45 {
+    for i in 0..size {
         nodes.insert(format!("x{i:02}"), x.extract(i, i));
         nodes.insert(format!("y{i:02}"), y.extract(i, i));
         nodes.insert(format!("z{i:02}"), z.extract(i, i));
@@ -125,16 +125,16 @@ fn bonus(input: &str) -> String {
                 nodes.insert(b.to_string(), ast::BV::new_const(&ctx, b, 1));
             }
 
-            if !nodes.contains_key(out) {
-                nodes.insert(out.to_string(), ast::BV::new_const(&ctx, out, 1));
-            }
+            // if !nodes.contains_key(out) {
+            //     nodes.insert(out.to_string(), ast::BV::new_const(&ctx, out, 1));
+            // }
 
             let node_a = nodes.get(a).unwrap();
             let node_b = nodes.get(b).unwrap();
             let node_out = nodes.get(out).unwrap();
 
             match &op[..] {
-                "AND" => node_a.bvadd(&node_b)._eq(&node_out),
+                "AND" => node_a.bvand(&node_b)._eq(&node_out),
                 "OR" => node_a.bvor(&node_b)._eq(&node_out),
                 "XOR" => node_a.bvxor(&node_b)._eq(&node_out),
                 _ => unreachable!(),
@@ -144,7 +144,39 @@ fn bonus(input: &str) -> String {
 
     let equations_hold = &ast::Bool::and(&ctx, &equations.iter().collect_vec());
 
-    solver.assert(&equations_hold.implies(&ast::BV::bvadd(&x, &y)._eq(&z)));
+    // we want:
+    //   equations AND
+    //   for ALL x,y [ x + y = z ]
+
+    // stated differently:
+    // we want NO:
+    //   equations AND
+    //   x + y != z
+
+    solver.assert(&ast::Bool::and(
+        &ctx,
+        &[
+            //
+            &equations_hold,
+            &(if goal == "and" {
+                ast::BV::bvand(&x, &y)
+            } else {
+                ast::BV::bvadd(&x, &y)
+            }
+            ._eq(&z)
+            .not()),
+        ],
+    ));
+
+    // solver.assert(&ast::Bool::implies(
+    //     &equations_hold,
+    //     &(if goal == "and" {
+    //         ast::BV::bvand(&x, &y)
+    //     } else {
+    //         ast::BV::bvadd(&x, &y)
+    //     }
+    //     ._eq(&z)),
+    // ));
 
     println!("{}", solver);
 
@@ -154,10 +186,10 @@ fn bonus(input: &str) -> String {
             println!("sat, with x = {}", model.eval(&x, true).unwrap());
         }
         SatResult::Unknown => {
-            panic!("sat::unknown :(")
+            panic!("unknown?>! :(")
         }
         SatResult::Unsat => {
-            panic!("sat::unsat :(")
+            panic!("UNSAT :(")
         }
     }
 
@@ -243,7 +275,9 @@ x02 AND y02 -> z01
 x03 AND y03 -> z03
 x04 AND y04 -> z04
 x05 AND y05 -> z00
-"
+",
+            6,
+            "and",
         ),
         "z00,z01,z02,z05".to_string()
     );
