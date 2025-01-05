@@ -1,12 +1,12 @@
 use ast::Ast;
 use fxhash::{FxHashMap, FxHashSet};
 use itertools::Itertools;
-use rayon::prelude::*;
-use std::time::Instant;
+use std::{fs, time::Instant};
 use z3::*;
 
 fn main() {
     let input = include_str!("../../../inputs/input_24.txt");
+    let input_manually_fixed = include_str!("../input_manually_fixed.txt");
 
     time(|| {
         // <1ms
@@ -14,8 +14,8 @@ fn main() {
     });
 
     time(|| {
-        // ?
-        println!("Bonus: {}", bonus(input));
+        // a lot of manual work :P -- not machine-solved
+        println!("Bonus: {}", bonus(input_manually_fixed));
     });
 }
 
@@ -84,8 +84,15 @@ fn solve(input: &'static str) -> usize {
 }
 
 fn bonus(input: &str) -> String {
-    let size = 46;
+    let size = 45;
     let (_, wires) = input.trim().split_once("\n\n").unwrap();
+    let eqs = wires
+        .lines()
+        .map(|wire| {
+            let (a, op, b, _, out) = wire.split(" ").collect_tuple().unwrap();
+            (a, op, b, out)
+        })
+        .collect_vec();
 
     let cfg = Config::new();
     let ctx = Context::new(&cfg);
@@ -94,9 +101,6 @@ fn bonus(input: &str) -> String {
     let x = ast::BV::new_const(&ctx, "x", size);
     let y = ast::BV::new_const(&ctx, "y", size);
     let z = ast::BV::new_const(&ctx, "z", size);
-
-    let a = ast::BV::new_const(&ctx, "a", size); // x+y
-    let c = ast::BV::new_const(&ctx, "c", size); // carry bits for computation of x+y
 
     let mut nodes = FxHashMap::default();
 
@@ -110,11 +114,9 @@ fn bonus(input: &str) -> String {
     }
 
     // add equations, which define z as resulting from the computation graph
-    let equations = wires
-        .lines()
-        .map(|wire| {
-            let (a, op, b, _, out) = wire.split(" ").collect_tuple().unwrap();
-
+    let equations = eqs
+        .iter()
+        .map(|&(a, op, b, out)| {
             if !nodes.contains_key(a) {
                 nodes.insert(a.to_string(), ast::BV::new_const(&ctx, a, 1));
             }
@@ -140,91 +142,96 @@ fn bonus(input: &str) -> String {
         })
         .collect_vec();
 
-    let equations_hold = ast::Bool::and(&ctx, &equations.iter().collect_vec());
-    solver.assert(&equations_hold);
+    let these_equations_hold = ast::Bool::and(&ctx, &equations.iter().collect_vec());
+    solver.assert(&these_equations_hold);
 
-    // add equations for `a` as the result of regular addition
-    // c_0 = 0
-    solver.assert(
-        &c.extract(0, 0)
-            ._eq(&x.extract(0, 0).bvand(&y.extract(0, 0))),
-    );
-    // a_0 = x_0 XOR y_0
-    solver.assert(
-        &a.extract(0, 0)
-            ._eq(&x.extract(0, 0).bvxor(&y.extract(0, 0))),
-    );
-    for i in 1..size {
-        // c_{i>0} = (x_i AND y_i) OR (x_i AND c_(i-1)) OR (y_i AND c_(i-1))
-        solver.assert(
-            &c.extract(i, i)._eq(
-                &ast::BV::from_u64(&ctx, 0, 1)
-                    .bvor(&x.extract(i, i).bvand(&y.extract(i, i)))
-                    .bvor(&x.extract(i, i).bvand(&c.extract(i - 1, i - 1)))
-                    .bvor(&y.extract(i, i).bvand(&c.extract(i - 1, i - 1))),
-            ),
-        );
-        // a_{i>0} = x_i XOR y_i XOR c_(i-1)
-        solver.assert(
-            &a.extract(i, i)._eq(
-                &x.extract(i, i)
-                    .bvxor(&y.extract(i, i).bvxor(&c.extract(i - 1, i - 1))),
-            ),
-        );
+    if "generate dot graph text".contains(" ") {
+        let mut nodes = FxHashSet::default();
+        let mut edges = FxHashSet::default();
+
+        // z
+        for (a, op, b, out) in &eqs {
+            nodes.insert((a.to_string(), a.to_string()));
+            nodes.insert((b.to_string(), b.to_string()));
+            nodes.insert((out.to_string(), out.to_string()));
+
+            let opnode = format!("{a}_{op}_{b}");
+            nodes.insert((opnode.clone(), op.to_string()));
+
+            edges.insert((a.to_string(), opnode.clone()));
+            edges.insert((b.to_string(), opnode.clone()));
+            edges.insert((opnode.clone(), out.to_string()));
+        }
+
+        let nodes = nodes
+            .into_iter()
+            .map(|(id, label)| format!("{id} [label=\"{label}\"];"))
+            .join("\n");
+
+        let edges = edges
+            .into_iter()
+            .map(|(a, b)| format!("{a} -> {b};"))
+            .join("\n");
+
+        // Create the svg afterwards with this command (after installing graphviz):
+        // dot -T svg computation_graph.dot -o computation_graph.svg
+        fs::write(
+            "./computation_graph.dot",
+            format!("digraph computation_graph {{ {nodes} {edges} }}"),
+        )
+        .unwrap();
     }
 
-    //  c-1 0 0 0 0
-    //   x  0 0 1 1
-    //   y  0 1 0 1
-    //   a  0 1 1 0
-    //   c  0 0 0 1
+    if "some old code" == "for the regular carry-add formulas" {
+        let a = ast::BV::new_const(&ctx, "a", size); // x+y
+        let c = ast::BV::new_const(&ctx, "c", size); // carry bits for computation of x+y
 
-    //  c-1 1 1 1 1
-    //   x  0 0 1 1
-    //   y  0 1 0 1
-    //   a  1 0 0 1
-    //   c  0 1 1 1
+        // add equations for `a` as the result of regular addition
+        // c_0 = 0
+        solver.assert(
+            &c.extract(0, 0)
+                ._eq(&x.extract(0, 0).bvand(&y.extract(0, 0))),
+        );
+        // a_0 = x_0 XOR y_0
+        solver.assert(
+            &a.extract(0, 0)
+                ._eq(&x.extract(0, 0).bvxor(&y.extract(0, 0))),
+        );
+        for i in 1..size {
+            // c_{i>0} = (x_i AND y_i) OR (x_i AND c_(i-1)) OR (y_i AND c_(i-1))
+            solver.assert(
+                &c.extract(i, i)._eq(
+                    &ast::BV::from_u64(&ctx, 0, 1)
+                        .bvor(&x.extract(i, i).bvand(&y.extract(i, i)))
+                        .bvor(&x.extract(i, i).bvand(&c.extract(i - 1, i - 1)))
+                        .bvor(&y.extract(i, i).bvand(&c.extract(i - 1, i - 1))),
+                ),
+            );
+            // a_{i>0} = x_i XOR y_i XOR c_(i-1)
+            solver.assert(
+                &a.extract(i, i)._eq(
+                    &x.extract(i, i)
+                        .bvxor(&y.extract(i, i).bvxor(&c.extract(i - 1, i - 1))),
+                ),
+            );
+        }
 
-    // let mut full = ast::Bool::from_bool(&ctx, true);
-
-    // for i in 0..5 {
-    //     full = ast::Bool::and(&ctx, &[&full, &a.extract(i, i)._eq(&z.extract(i, i))]);
-    //     println!("{full:?}");
-    //     let c = solver.check_assumptions(&[full.clone().not()]);
-    //     println!("a[0..{i}] = z[0..{i}] ? {c:?}");
-    // }
-
-    // let xy_eq_a = (0..size)
-    //     .map(|i| {
-    //         x.extract(i, i)
-    //             .bvadd(&y.extract(i, i))
-    //             ._eq(&a.extract(i, i))
-    //     })
-    //     .collect_vec();
-
-    // let xy_eq_z = (0..size)
-    //     .map(|i| {
-    //         x.extract(i, i)
-    //             .bvadd(&y.extract(i, i))
-    //             ._eq(&z.extract(i, i))
-    //     })
-    //     .collect_vec();
-
-    // UNSAT, i.e. cannot prove that x+y != a, i.e. generally x+y == a
-    for i in 0..size {
+        // indeed UNSAT, i.e. cannot prove that x+y != a, i.e. generally x+y == a
+        for i in 0..size {
+            println!(
+                "x[..={i}] + y[..={i}] != a[..={i}] ? {:?}",
+                solver.check_assumptions(&[x
+                    .extract(i, 0)
+                    .bvadd(&y.extract(i, 0))
+                    ._eq(&a.extract(i, 0))
+                    .not()])
+            );
+        }
         println!(
-            "x[..={i}] + y[..={i}] != a[..={i}] ? {:?}",
-            solver.check_assumptions(&[x
-                .extract(i, 0)
-                .bvadd(&y.extract(i, 0))
-                ._eq(&a.extract(i, 0))
-                .not()])
+            "x + y != a ? {:?}",
+            solver.check_assumptions(&[x.bvadd(&y)._eq(&a).not()])
         );
     }
-    println!(
-        "x + y != a ? {:?}",
-        solver.check_assumptions(&[x.bvadd(&y)._eq(&a).not()])
-    );
 
     // SAT, i.e. can create x,y,z st x+y != z, i.e. NOT generally x+y == z
     for i in 0..size {
@@ -242,60 +249,8 @@ fn bonus(input: &str) -> String {
         solver.check_assumptions(&[x.bvadd(&y)._eq(&z).not()])
     );
 
-    // ===
-
-    // // we want:
-    // //   equations AND
-    // //   for ALL x,y [ x + y = z ]
-
-    // // stated differently:
-    // // we want NO:
-    // //   equations AND
-    // //   x + y != z
-
-    // solver.assert(&ast::Bool::and(
-    //     &ctx,
-    //     &[
-    //         //
-    //         &equations_hold,
-    //         &(if goal == "and" {
-    //             ast::BV::bvand(&x, &y)
-    //         } else {
-    //             ast::BV::bvadd(&x, &y)
-    //         }
-    //         ._eq(&z)
-    //         .not()),
-    //     ],
-    // ));
-
-    // solver.assert(&ast::Bool::implies(
-    //     &equations_hold,
-    //     &(if goal == "and" {
-    //         ast::BV::bvand(&x, &y)
-    //     } else {
-    //         ast::BV::bvadd(&x, &y)
-    //     }
-    //     ._eq(&z)),
-    // ));
-
-    // println!("{}", solver);
-
-    // match solver.check() {
-    //     SatResult::Sat => {
-    //         // let model = solver.get_model().unwrap();
-    //         // println!("sat, with x = {}", model.eval(&x, true).unwrap());
-    //     }
-    //     SatResult::Unknown => {
-    //         println!("unknown?!")
-    //     }
-    //     SatResult::Unsat => {
-    //         println!("UNSAT :(");
-    //         // println!("THIS MEANS WE FOUND A SOLUTION, crossing {i} -- {j}, and {k} -- {l}");
-    //         // return Some((i, j, k, l));
-    //     }
-    // }
-
-    "".to_string()
+    // MANUAL :P
+    "dgr,dtv,fgc,mtj,vvm,z12,z29,z37".to_string()
 }
 
 #[test]
