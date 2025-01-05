@@ -187,9 +187,9 @@ Indeed, 504 moves in 😅 You can see it going wrong. As soon as I found this li
 
 Pretty hard! Of both these days, I'm (still) having a hard time getting the bonus :P
 
-_Update: I solved the bonus of day 16 on Jan 2nd_
+_Update (Jan 2nd): I solved the bonus of day 16 🤘_
 
-_Update: I finally solved day 17's bonus on Jan 4th, after a LOT of struggling with bit patterns and multiple different attempts and strategies :P I kinda cheated in the end though, using Z3 to solve the system of equations about `A`'s bit pattern, while minimizing `A`. I was also just about to code another attempt that's more hand-crafted, after failing at getting the Z3 solution to work, while I found a bug in my Z3 solution, the fixing of which led to the right solution. Here's some pics of the process:_
+_Update (Jan 4th): I finally solved day 17's bonus, after a LOT of struggling with bit patterns and multiple different attempts and strategies :P I kinda cheated in the end though, using Z3 to solve the system of equations about `A`'s bit pattern, while minimizing `A`. I was also just about to code another attempt that's more hand-crafted, after failing at getting the Z3 solution to work, while I found a bug in my Z3 solution, the fixing of which led to the right solution. Here's some pics of the process:_
 
 ![](./impressions/day17_crafting.png)
 
@@ -257,7 +257,7 @@ Not too hard — I had a fun time on Jan 2nd + 3rd solving these :)
 
 The first part is easily doable, the second part .. will indeed require Z3 again, like the day 24's bonus of previous years :P I haven't gotten around to taking enough to think this one through yet...
 
-_Update: I finally was able to solve it, after I decided it wasn't fruitful to try to programmatically/generically solve it with Z3. Instead, I printed the computation graph out as a dot file and visualized it with GraphViz to see what was going on. Looking at the graph for a bit revealed the structured pattern that it adhered to ("11 nodes between each successive `OR`"), basically just a clever variation on the regular "add two binary represented numbers with carry" pattern. And then I went ahead to catch all the deviations from this pattern manually. I was aided with Z3 though, because I left the bit of Z3 code that would go and check for up until which bit there were no errors._
+_Update (Jan 5th): I finally was able to solve it, after I decided it wasn't fruitful to try to programmatically/generically solve it with Z3. Instead, I printed the computation graph out as a dot file and visualized it with GraphViz to see what was going on. Looking at the graph for a bit revealed the structured pattern that it adhered to ("11 nodes between each successive `OR`"), basically just a clever variation on the regular "add two binary represented numbers with carry" pattern. And then I went ahead to catch all the deviations from this pattern manually. I was aided with Z3 though, because I left the bit of Z3 code that would go and check for up until which bit there were no errors._
 
 ```rust
 for i in 0..size {
@@ -292,3 +292,5 @@ _Here's the generated dot graph btw (before fixing the errors):_
 ## Day 25
 
 First part's easy, but ... I'mma have to solve day 17's bonus + day 24's bonus first, before I can complete 25's bonus, as expected 😅
+
+_Update (Jan 5th): I'm all done now! 🤘 Overall, loved this year's Advent of Code again. The bonuses of day 17 and 24 were the hardest for me, this year. I somehow thought that day 24 would be "traditionally" a Z3-day, but I was wrong, I really needed Z3 for day 17, but not for day 24. Day 24 was just some dirty manual work that I had postponed for too long because I thought I could cleverly circumvent it :P_
