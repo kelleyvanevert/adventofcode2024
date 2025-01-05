@@ -257,6 +257,38 @@ Not too hard — I had a fun time on Jan 2nd + 3rd solving these :)
 
 The first part is easily doable, the second part .. will indeed require Z3 again, like the day 24's bonus of previous years :P I haven't gotten around to taking enough to think this one through yet...
 
+_Update: I finally was able to solve it, after I decided it wasn't fruitful to try to programmatically/generically solve it with Z3. Instead, I printed the computation graph out as a dot file and visualized it with GraphViz to see what was going on. Looking at the graph for a bit revealed the structured pattern that it adhered to ("11 nodes between each successive `OR`"), basically just a clever variation on the regular "add two binary represented numbers with carry" pattern. And then I went ahead to catch all the deviations from this pattern manually. I was aided with Z3 though, because I left the bit of Z3 code that would go and check for up until which bit there were no errors._
+
+```rust
+for i in 0..size {
+    // Check whether x+y=z up to bit i
+    println!(
+        "x[..={i}] + y[..={i}] != z[..={i}] ? {:?}",
+        solver.check_assumptions(&[
+            x.extract(i, 0).bvadd(&y.extract(i, 0))
+              ._eq(&z.extract(i, 0))
+              .not()
+        ])
+    );
+}
+```
+
+_This way, the first line that would spit out `Sat` would be the erroneous bit calculation that I needed to go and fix, and after fixing it in an amended copy fo the input file, I could run the code again, and repeat the process until I was done._
+
+```
+...
+x[..=34] + y[..=34] != z[..=34] ? Unsat
+x[..=35] + y[..=35] != z[..=35] ? Unsat
+x[..=36] + y[..=36] != z[..=36] ? Unsat
+x[..=37] + y[..=37] != z[..=37] ? Sat  <-- the next erroneous bit
+x[..=38] + y[..=38] != z[..=38] ? Sat
+...
+```
+
+_Here's the generated dot graph btw (before fixing the errors):_
+
+![](./impressions/day24_computation_graph_original.svg)
+
 ## Day 25
 
 First part's easy, but ... I'mma have to solve day 17's bonus + day 24's bonus first, before I can complete 25's bonus, as expected 😅
