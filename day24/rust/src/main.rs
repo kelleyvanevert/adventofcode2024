@@ -93,122 +93,136 @@ fn bonus(input: &str, size: u32, goal: &str) -> String {
         })
         .collect_vec();
 
-    // let mut all_eqs = vec![eqs.clone()];
-    for (i, j) in (0..eqs.len()).tuple_combinations() {
-        println!("{i},{j}");
-        for (k, l) in (0..eqs.len()).tuple_combinations() {
-            if i == k || i == l || j == k || j == l {
-                continue;
-            }
-
-            println!("  {k},{l}");
-
-            // println!("{i},{j},{k},{l}");
-            let mut eqs = eqs.clone();
-            (eqs[j].3, eqs[i].3) = (eqs[i].3, eqs[j].3);
-            (eqs[l].3, eqs[k].3) = (eqs[k].3, eqs[l].3);
-
-            let cfg = Config::new();
-            let ctx = Context::new(&cfg);
-            let solver = Solver::new(&ctx);
-
-            let x = ast::BV::new_const(&ctx, "x", size);
-            let y = ast::BV::new_const(&ctx, "y", size);
-            let z = ast::BV::new_const(&ctx, "z", size);
-
-            let mut nodes = FxHashMap::default();
-
-            // add x's and y's and z's bit nodes
-            for i in 0..size {
-                nodes.insert(format!("x{i:02}"), x.extract(i, i));
-                nodes.insert(format!("y{i:02}"), y.extract(i, i));
-                nodes.insert(format!("z{i:02}"), z.extract(i, i));
-            }
-
-            // add equations
-            let equations = eqs
-                .into_iter()
-                .map(|(a, op, b, out)| {
-                    if !nodes.contains_key(a) {
-                        nodes.insert(a.to_string(), ast::BV::new_const(&ctx, a, 1));
-                    }
-
-                    if !nodes.contains_key(b) {
-                        nodes.insert(b.to_string(), ast::BV::new_const(&ctx, b, 1));
-                    }
-
-                    if !nodes.contains_key(out) {
-                        nodes.insert(out.to_string(), ast::BV::new_const(&ctx, out, 1));
-                    }
-
-                    let node_a = nodes.get(a).unwrap();
-                    let node_b = nodes.get(b).unwrap();
-                    let node_out = nodes.get(out).expect(&format!("should have out={out}"));
-
-                    match &op[..] {
-                        "AND" => node_a.bvand(&node_b)._eq(&node_out),
-                        "OR" => node_a.bvor(&node_b)._eq(&node_out),
-                        "XOR" => node_a.bvxor(&node_b)._eq(&node_out),
-                        _ => unreachable!(),
-                    }
-                })
-                .collect_vec();
-
-            let equations_hold = &ast::Bool::and(&ctx, &equations.iter().collect_vec());
-
-            // we want:
-            //   equations AND
-            //   for ALL x,y [ x + y = z ]
-
-            // stated differently:
-            // we want NO:
-            //   equations AND
-            //   x + y != z
-
-            solver.assert(&ast::Bool::and(
-                &ctx,
-                &[
-                    //
-                    &equations_hold,
-                    &(if goal == "and" {
-                        ast::BV::bvand(&x, &y)
-                    } else {
-                        ast::BV::bvadd(&x, &y)
-                    }
-                    ._eq(&z)
-                    .not()),
-                ],
-            ));
-
-            // solver.assert(&ast::Bool::implies(
-            //     &equations_hold,
-            //     &(if goal == "and" {
-            //         ast::BV::bvand(&x, &y)
-            //     } else {
-            //         ast::BV::bvadd(&x, &y)
-            //     }
-            //     ._eq(&z)),
-            // ));
-
-            // println!("{}", solver);
-
-            match solver.check() {
-                SatResult::Sat => {
-                    let model = solver.get_model().unwrap();
-                    // println!("sat, with x = {}", model.eval(&x, true).unwrap());
+    let found_solution = (0..eqs.len())
+        .tuple_combinations()
+        // .flat_map(|(i, j)| {
+        //     (0..eqs.len())
+        //         .tuple_combinations()
+        //         .filter(|&(k, l)| i != k && i != l && j != k && j != l)
+        //         .map(|(k, l)| (i, j, k, l))
+        //     // .collect_vec()
+        // })
+        .par_bridge()
+        .find_map_any(|(i, j)| {
+            (0..eqs.len()).tuple_combinations().find_map(|(k, l)| {
+                if i == k || i == l || j == k || j == l {
+                    return None;
                 }
-                SatResult::Unknown => {
-                    println!("unknown?!")
-                }
-                SatResult::Unsat => {
-                    println!("UNSAT :(");
-                    panic!("THIS MEANS WE FOUND A SOLUTION, crossing {i} -- {j}, and {k} -- {l}");
-                }
-            }
-        }
-    }
 
-    // println!("{}", all_eqs.len());
+                println!("{i},{j},{k},{l}");
+
+                let mut eqs = eqs.clone();
+                (eqs[j].3, eqs[i].3) = (eqs[i].3, eqs[j].3);
+                (eqs[l].3, eqs[k].3) = (eqs[k].3, eqs[l].3);
+
+                let cfg = Config::new();
+                let ctx = Context::new(&cfg);
+                let solver = Solver::new(&ctx);
+
+                let x = ast::BV::new_const(&ctx, "x", size);
+                let y = ast::BV::new_const(&ctx, "y", size);
+                let z = ast::BV::new_const(&ctx, "z", size);
+
+                let mut nodes = FxHashMap::default();
+
+                // add x's and y's and z's bit nodes
+                for i in 0..size {
+                    nodes.insert(format!("x{i:02}"), x.extract(i, i));
+                    nodes.insert(format!("y{i:02}"), y.extract(i, i));
+                    nodes.insert(format!("z{i:02}"), z.extract(i, i));
+                }
+
+                // add equations
+                let equations = eqs
+                    .into_iter()
+                    .map(|(a, op, b, out)| {
+                        if !nodes.contains_key(a) {
+                            nodes.insert(a.to_string(), ast::BV::new_const(&ctx, a, 1));
+                        }
+
+                        if !nodes.contains_key(b) {
+                            nodes.insert(b.to_string(), ast::BV::new_const(&ctx, b, 1));
+                        }
+
+                        if !nodes.contains_key(out) {
+                            nodes.insert(out.to_string(), ast::BV::new_const(&ctx, out, 1));
+                        }
+
+                        let node_a = nodes.get(a).unwrap();
+                        let node_b = nodes.get(b).unwrap();
+                        let node_out = nodes.get(out).expect(&format!("should have out={out}"));
+
+                        match &op[..] {
+                            "AND" => node_a.bvand(&node_b)._eq(&node_out),
+                            "OR" => node_a.bvor(&node_b)._eq(&node_out),
+                            "XOR" => node_a.bvxor(&node_b)._eq(&node_out),
+                            _ => unreachable!(),
+                        }
+                    })
+                    .collect_vec();
+
+                let equations_hold = &ast::Bool::and(&ctx, &equations.iter().collect_vec());
+
+                // we want:
+                //   equations AND
+                //   for ALL x,y [ x + y = z ]
+
+                // stated differently:
+                // we want NO:
+                //   equations AND
+                //   x + y != z
+
+                solver.assert(&ast::Bool::and(
+                    &ctx,
+                    &[
+                        //
+                        &equations_hold,
+                        &(if goal == "and" {
+                            ast::BV::bvand(&x, &y)
+                        } else {
+                            ast::BV::bvadd(&x, &y)
+                        }
+                        ._eq(&z)
+                        .not()),
+                    ],
+                ));
+
+                // solver.assert(&ast::Bool::implies(
+                //     &equations_hold,
+                //     &(if goal == "and" {
+                //         ast::BV::bvand(&x, &y)
+                //     } else {
+                //         ast::BV::bvadd(&x, &y)
+                //     }
+                //     ._eq(&z)),
+                // ));
+
+                // println!("{}", solver);
+
+                match solver.check() {
+                    SatResult::Sat => {
+                        // let model = solver.get_model().unwrap();
+                        // println!("sat, with x = {}", model.eval(&x, true).unwrap());
+                    }
+                    SatResult::Unknown => {
+                        println!("unknown?!")
+                    }
+                    SatResult::Unsat => {
+                        println!("UNSAT :(");
+                        println!(
+                            "THIS MEANS WE FOUND A SOLUTION, crossing {i} -- {j}, and {k} -- {l}"
+                        );
+                        return Some((i, j, k, l));
+                    }
+                }
+
+                None
+            })
+        });
+
+    println!("");
+    println!("===");
+    println!("FOUND SOLUTION? {:?}", found_solution);
 
     // let cfg = Config::new();
     // let ctx = Context::new(&cfg);
