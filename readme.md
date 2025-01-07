@@ -7,6 +7,7 @@ See https://adventofcode.com/2024
 - [Previous year's repo](https://github.com/kelleyvanevert/adventofcode2023)
 - Friends also participating:
   - [Auke](https://github.com/Fadarrizz/advent-of-code/tree/main/2024/)
+  - [Luka](https://github.com/orglce/aof2024)
 
 ## Getting started
 
